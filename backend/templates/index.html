@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>Enc GDrive Login Page</title>
+  <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Rubik:400,700'><link rel="stylesheet" href="{{ url_for('static',filename='styles/styles.css') }}">
+
+</head>
+<body>
+<div class="login-form">
+  <form action="" method="post">
+    <h1>Login to the drive</h1>
+      <div class="content">
+        <div class="input-field">
+          <input name="password" type="password" placeholder="Password">
+        </div>
+      </div>
+    <div class="action">
+      <button type="submit" value="Sign In">Sign In</button>
+    </div>
+  </form>
+  {% if error %}
+        <p class="error"><strong>Error:</strong> {{ error }}
+  {% endif %}
+</div>
+</body>
+</html>

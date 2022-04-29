@@ -182,7 +182,7 @@ def main():
         },
     )
 
-    assert read_response.status_code == 204
+    assert delete_response.status_code == 204
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, render_template, redirect, url_for
 from flask_cors import CORS
 from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
@@ -99,6 +99,20 @@ def handle_verification_failure(e: ValueError):
 def handle_file_not_found(e):
     return "the file does not exist.", 404
 
+@app.route("/", methods=['GET','POST'])
+@app.route("/login", methods=['GET','POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        print(request.form.get('password'))
+        if request.form.get('password') != 'admin':
+            error = 'Invalid Credentials. Please try again.'
+        else:
+            # return redirect(url_for('home'))
+            error = 'Valid Credentials. Test Complete.'
+            return render_template('menu.html')
+    print(error)
+    return render_template('index.html', error=error)
 
 @app.post("/" + Endpoint.Create)
 def create_file():
