@@ -19,8 +19,22 @@ SHARES: int = 5
 SHARES_SUFFICIENT: int = 2
 
 
-def create_shared_secrets(key: bytes) -> List[(int, str)]:
-    return Shamir.split(SHARES_SUFFICIENT, SHARES, key)
+def create_shared_secrets(credential_bytes: bytes) -> list:
+    return Shamir.split(SHARES_SUFFICIENT, SHARES, credential_bytes)
+
+
+def key_from_shared(shared_secrets: list) -> bytes:
+    # check whether the number of shared secerts in the input is enough to recreate the key
+    if len(shared_secrets) >= SHARES_SUFFICIENT:
+        raise Exception(
+            f"required to have at least {SHARES_SUFFICIENT} shared secrets."
+        )
+    # return the assembled key, which is equivalent to the bytes of the password
+    return Shamir.combine(shared_secrets)
+
+
+def key_from_password(password: str) -> bytes:
+    return password.encode("UTF-8")
 
 
 def compute_salted_hash(credenial_bytes: bytes, r: int, salt: bytes) -> bytes:
@@ -30,23 +44,7 @@ def compute_salted_hash(credenial_bytes: bytes, r: int, salt: bytes) -> bytes:
     return key
 
 
-def key_from_password(password: str):
-    key_bytes = password.encode("UTF-8")
-    return compute_salted_hash(key_bytes, r, salt)
-
-
-def key_from_shared(shared_secrets: List[(int, str)]):
-    # check whether the number of shared secerts in the input is enough to recreate the key
-    if len(shared_secrets) >= SHARES_SUFFICIENT:
-        raise Exception(
-            f"required to have at least {SHARES_SUFFICIENT} shared secrets."
-        )
-
-    key_bytes = Shamir.combine(shared_secrets)
-    return compute_salted_hash(key_bytes, r, salt)
-
-
-def encrypt_and_digest(credential_bytes: bytes, plaintext: bytes):
+def encrypt_and_digest(credential_bytes: bytes, plaintext: bytes) -> bytes:
     # generate random nonce value
     nonce = get_random_bytes(16)
     # generate random salt and r values for hashing
@@ -65,8 +63,8 @@ def encrypt_and_digest(credential_bytes: bytes, plaintext: bytes):
     # write metadata and content to file buffer (salt | r | nonce | tag | ciphertext)
     file_data.write(salt + r + nonce + tag + ciphertext)
 
-    # save data to the cloud
-    # ...
+    # return all of the bytes of this file
+    return file_data.read()
 
 
 def decrypt_and_verify(credential_bytes: bytes, file_data: bytes) -> str:
@@ -88,10 +86,3 @@ def decrypt_and_verify(credential_bytes: bytes, file_data: bytes) -> str:
     plaintext = cipher.decrypt_and_verify(ciphertext, tag)
     # return the contents of the file
     return plaintext
-
-
-def download_file_as_bytes(filename: str) -> bytes:
-    # network calls to get the file
-    file_data = bytes()
-    # returns the file as an array of bytes
-    return file_data
