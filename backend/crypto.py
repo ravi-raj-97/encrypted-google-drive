@@ -34,7 +34,7 @@ def key_from_shared(shared_secrets: list) -> bytes:
 
 
 def key_from_password(password: str) -> bytes:
-    return password.encode("UTF-8")
+    return sha256(password.encode("UTF-8")).digest()
 
 
 def compute_salted_hash(credenial_bytes: bytes, r: int, salt: bytes) -> bytes:

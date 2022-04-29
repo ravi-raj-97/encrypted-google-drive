@@ -1,4 +1,5 @@
 from flask import Flask, request
+from flask_cors import CORS
 from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -12,6 +13,7 @@ from definitions import *
 
 
 app = Flask(__name__)
+CORS(app)
 
 # service = drive.init_drive_service()
 
@@ -80,10 +82,21 @@ def upload_file_bytes(filename: str, file_data: bytes):
 @app.post("/" + Endpoint.Create)
 def create_file():
     if request.headers.get("Content-Type") == "application/json":
+        # read filename
         file_name = request.json[RequestBodyField.Filename]
-        password = request.json[RequestBodyField.Password]
+        # read file contents
+        contents = request.json[RequestBodyField.Content]
+        # prepare credential byte array
+        credential_bytes = get_credential_bytes()
 
-        return "good!"
+        # check if the file exists
+        if download_file_as_bytes(file_name):
+            return "file already exists"
+
+        # if file is valid, then encrypt a new version
+        file_bytes = crypto.encrypt_and_digest(credential_bytes, contents)
+        # upload the file with the new contents
+        upload_file_bytes(file_name, file_bytes)
 
 
 @app.post("/" + Endpoint.Edit)
@@ -107,16 +120,21 @@ def update_file():
 
 @app.post("/" + Endpoint.SharedSecrets)
 def get_shared_secrets():
-    if request.header.get("Content-Type") == "application/json":
+    if request.headers.get("Content-Type") == "application/json":
         # read password field coming in from the user
         password = request.json[RequestBodyField.Password]
         # return the list of shared shamir secrets
-        return crypto.create_shared_secrets(credential_bytes)
+        return {
+            "keys": [
+                (x[0], x[1].hex()) for x in crypto.create_shared_secrets(bytearray(16))
+            ]
+        }
+        # crypto.key_from_password(password))
 
 
 @app.post("/" + Endpoint.ChangePassword)
 def change_password():
-    if request.header.get("Content-Type") == "application/json":
+    if request.headers.get("Content-Type") == "application/json":
         # prepare credential byte array
         credential_bytes = get_credential_bytes()
 

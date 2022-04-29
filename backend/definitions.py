@@ -11,7 +11,7 @@ class PasswordMode(Enum):
     Shared = "shared"
 
 
-class RequestBodyField(Enum):
+class RequestBodyField:
     Filename = "file_name"
     Password = "password"
     SharedSecrets = "shared_secrets"
@@ -22,10 +22,8 @@ class RequestBodyField(Enum):
 class Endpoint:
     # Create a brand new file as the owner
     Create = "create"
-    # Edit a file gaining access using a password
-    Edit = "edit-owner"
     # Edit a file gaining access using shared secrets
-    EditShared = "edit-shared"
+    Edit = "edit"
 
     # generate shared secrets for the currently open document
     SharedSecrets = "shared-secrets"
