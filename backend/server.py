@@ -90,14 +90,14 @@ def delete_file_bytes(filename: str):
 @app.errorhandler(ValueError)
 def handle_verification_failure(e: ValueError):
     if "MAC" in str(e):
-        return "password may be incorrect or the file is corrupt.", 400
+        return "password may be incorrect or the file is corrupt.", 401
 
     return "unknown error.", 400
 
 
 @app.errorhandler(FileNotFoundError)
 def handle_file_not_found(e):
-    return "the file does not exist.", 400
+    return "the file does not exist.", 404
 
 
 @app.post("/" + Endpoint.Create)
@@ -124,7 +124,7 @@ def create_file():
 
             return "", 201
         else:
-            return {"error": f"the file `{file_name}` already exists."}, 400
+            return f"the file `{file_name}` already exists.", 409
 
 
 @app.post("/" + Endpoint.Read)
@@ -211,6 +211,7 @@ def change_password():
         return "", 200
 
 
+# TODO
 @app.post("/" + Endpoint.SharedSecrets)
 def get_shared_secrets():
     if request.headers.get("Content-Type") == "application/json":
