@@ -20,10 +20,14 @@ class RequestBodyField:
 
 
 class Endpoint:
-    # Create a brand new file as the owner
+    # Create a brand new file
     Create = "create"
+    # Read the contents of a file
+    Read = "read"
     # Edit a file gaining access using shared secrets
-    Edit = "edit"
+    Update = "update"
+    # delete a file
+    Delete = "delete"
 
     # generate shared secrets for the currently open document
     SharedSecrets = "shared-secrets"

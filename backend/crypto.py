@@ -37,8 +37,9 @@ def key_from_password(password: str) -> bytes:
     return sha256(password.encode("UTF-8")).digest()
 
 
-def compute_salted_hash(credenial_bytes: bytes, r: int, salt: bytes) -> bytes:
+def compute_salted_hash(credenial_bytes: bytes, salt: bytes) -> bytes:
     key = bytes()
+    r = 10
     for i in range(1, r):
         key = sha256(key + credenial_bytes + salt).digest()
     return key
@@ -47,12 +48,10 @@ def compute_salted_hash(credenial_bytes: bytes, r: int, salt: bytes) -> bytes:
 def encrypt_and_digest(credential_bytes: bytes, plaintext: bytes) -> bytes:
     # generate random nonce value
     nonce = get_random_bytes(16)
-    # generate random salt and r values for hashing
-    salt = get_random_bytes(8)
-    r = randint(1, 128).to_bytes(8, "big")
-
+    # generate random salt for hashing
+    salt = get_random_bytes(16)
     # generate key from credentials
-    key = compute_salted_hash(credenial_bytes, r, salt)
+    key = compute_salted_hash(credential_bytes, salt)
     # create the AES-GCM cipher
     cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
     # encrypt the data
@@ -60,9 +59,11 @@ def encrypt_and_digest(credential_bytes: bytes, plaintext: bytes) -> bytes:
 
     # IO buffer to hold the encrypted file data
     file_data = io.BytesIO()
-    # write metadata and content to file buffer (salt | r | nonce | tag | ciphertext)
-    file_data.write(salt + r + nonce + tag + ciphertext)
+    # write metadata and content to file buffer (salt | nonce | tag | ciphertext)
+    file_data.write(salt + nonce + tag + ciphertext)
 
+    # reset the reading pointer
+    file_data.seek(0)
     # return all of the bytes of this file
     return file_data.read()
 
@@ -71,18 +72,17 @@ def decrypt_and_verify(credential_bytes: bytes, file_data: bytes) -> str:
     # read the data through a byte buffer
     file_bytes = io.BytesIO(file_data)
     # read all of the components from the file data
-    salt, r, nonce, tag, ciphertext = (
+    salt, nonce, tag, ciphertext = (
         file_bytes.read(16),
-        int.from_bytes(file_bytes.read(8), "big"),
-        file_bytes.read(8),
-        file_bytes.read(32),
+        file_bytes.read(16),
+        file_bytes.read(16),
         file_bytes.read(),
     )
     # compute hashed key
-    key = compute_salted_hash(credenial_bytes, r, salt)
+    key = compute_salted_hash(credential_bytes, salt)
     # create cipher using stored nonce
     cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
     # decrypt and verify
-    plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+    plaintext: bytes = cipher.decrypt_and_verify(ciphertext, tag)
     # return the contents of the file
-    return plaintext
+    return plaintext.decode("UTF-8")

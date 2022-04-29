@@ -35,6 +35,10 @@ def get_credential_bytes():
         # create credentials key from shared secrets
         credential_bytes = crypto.key_from_shared(shared_secrets)
 
+    if not credential_bytes:
+        # there were not authentication methods
+        raise Exception("no authentication method given in request.")
+
     return credential_bytes
 
 
@@ -54,12 +58,9 @@ def download_file_as_bytes(filename: str) -> bytes:
     # requested_file = files[0]
 
     # mock filesystem implementation
-    if not os.path.exists(filename):
-        raise Exception("file doesnt exist")
-
-    with open(filename) as f:
+    with open(filename, "rb") as f:
         # read the entire content of the file
-        file_data = filef.read()
+        file_data = f.read()
         # returns the file as an array of bytes
         return file_data
 
@@ -75,37 +76,79 @@ def upload_file_bytes(filename: str, file_data: bytes):
     # # ).execute()
 
     # mock filesystem implementation
-    with open(filename, "w") as f:
+    with open(filename, "w+b") as f:
         f.write(file_data)
+
+
+def delete_file_bytes(filename: str):
+    # TODO networking code
+
+    # mock filesystem implementation
+    os.remove(filename)
+
+
+@app.errorhandler(ValueError)
+def handle_verification_failure(e: ValueError):
+    if "MAC" in str(e):
+        return "password may be incorrect or the file is corrupt.", 400
+
+    return "unknown error.", 400
+
+
+@app.errorhandler(FileNotFoundError)
+def handle_file_not_found(e):
+    return "the file does not exist.", 400
 
 
 @app.post("/" + Endpoint.Create)
 def create_file():
     if request.headers.get("Content-Type") == "application/json":
+
         # read filename
         file_name = request.json[RequestBodyField.Filename]
         # read file contents
-        contents = request.json[RequestBodyField.Content]
+        contents: str = request.json[RequestBodyField.Content]
         # prepare credential byte array
         credential_bytes = get_credential_bytes()
 
         # check if the file exists
-        if download_file_as_bytes(file_name):
-            return "file already exists"
+        try:
+            download_file_as_bytes(file_name)
+        except Exception:
+            # if file is valid, then encrypt a new version
+            file_bytes = crypto.encrypt_and_digest(
+                credential_bytes, contents.encode("UTF-8")
+            )
+            # upload the file with the new contents
+            upload_file_bytes(file_name, file_bytes)
 
+            return "", 201
+        else:
+            return {"error": f"the file `{file_name}` already exists."}, 400
+
+
+@app.post("/" + Endpoint.Read)
+def read_file():
+    if request.headers.get("Content-Type") == "application/json":
+        # read filename
+        file_name = request.json[RequestBodyField.Filename]
+        # prepare credential byte array
+        credential_bytes = get_credential_bytes()
+        # check if the file exists
+        file_data = download_file_as_bytes(file_name)
         # if file is valid, then encrypt a new version
-        file_bytes = crypto.encrypt_and_digest(credential_bytes, contents)
-        # upload the file with the new contents
-        upload_file_bytes(file_name, file_bytes)
+        content = crypto.decrypt_and_verify(credential_bytes, file_data)
+        # return the content of the file to the user
+        return {"content": content}
 
 
-@app.post("/" + Endpoint.Edit)
+@app.post("/" + Endpoint.Update)
 def update_file():
     if request.headers.get("Content-Type") == "application/json":
         # read filename
         file_name = request.json[RequestBodyField.Filename]
         # read new file contents
-        new_contents = request.json[RequestBodyField.Content]
+        new_contents: str = request.json[RequestBodyField.Content]
         # prepare credential byte array
         credential_bytes = get_credential_bytes()
         # download file
@@ -113,23 +156,30 @@ def update_file():
         # verify that the contents are correct
         crypto.decrypt_and_verify(credential_bytes, file_data)
         # if file is valid, then encrypt a new version
-        updated_file_bytes = crypto.encrypt_and_digest(credential_bytes, new_contents)
+        updated_file_bytes = crypto.encrypt_and_digest(
+            credential_bytes, new_contents.encode("UTF-8")
+        )
         # upload the file with the new contents
         upload_file_bytes(file_name, updated_file_bytes)
 
+        return "", 200
 
-@app.post("/" + Endpoint.SharedSecrets)
-def get_shared_secrets():
+
+@app.post("/" + Endpoint.Delete)
+def delete_file():
     if request.headers.get("Content-Type") == "application/json":
-        # read password field coming in from the user
-        password = request.json[RequestBodyField.Password]
-        # return the list of shared shamir secrets
-        return {
-            "keys": [
-                (x[0], x[1].hex()) for x in crypto.create_shared_secrets(bytearray(16))
-            ]
-        }
-        # crypto.key_from_password(password))
+        # read filename
+        file_name = request.json[RequestBodyField.Filename]
+        # prepare credential byte array
+        credential_bytes = get_credential_bytes()
+        # download file
+        file_data = download_file_as_bytes(file_name)
+        # verify that the contents are correct
+        crypto.decrypt_and_verify(credential_bytes, file_data)
+        # remove the file
+        delete_file_bytes(file_name)
+
+        return "", 204
 
 
 @app.post("/" + Endpoint.ChangePassword)
@@ -137,10 +187,6 @@ def change_password():
     if request.headers.get("Content-Type") == "application/json":
         # prepare credential byte array
         credential_bytes = get_credential_bytes()
-
-        if not credential_bytes:
-            # there were not authentication methods
-            raise Exception("no authentication method given in request.")
 
         # read file name
         file_name = request.json[RequestBodyField.Filename]
@@ -155,10 +201,30 @@ def change_password():
         credential_bytes = crypto.key_from_password(new_password)
 
         # encrypt the file with the new contents
-        new_file_data = crypto.encrypt_and_digest(credential_bytes, file_contents)
+        new_file_data = crypto.encrypt_and_digest(
+            credential_bytes, file_contents.encode("UTF-8")
+        )
 
         # upload this new file to the drive
-        upload_file_bytes(file_name, file_data)
+        upload_file_bytes(file_name, new_file_data)
+
+        return "", 200
+
+
+@app.post("/" + Endpoint.SharedSecrets)
+def get_shared_secrets():
+    if request.headers.get("Content-Type") == "application/json":
+        # read password field coming in from the user
+        password = request.json[RequestBodyField.Password]
+        # turn password into 32byte key
+        credential_bytes = crypto.key_from_password(password)
+        # return the list of shared shamir secrets
+        shared_secrets = [
+            f"{x[0]}-{x[1].hex()}"
+            for x in crypto.create_shared_secrets(credential_bytes)
+        ]
+
+        return {"shared_secrets": shared_secrets}
 
 
 if __name__ == "__main__":
