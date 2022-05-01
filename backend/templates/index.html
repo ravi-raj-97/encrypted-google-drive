@@ -8,7 +8,11 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='styles/styles.css') }}">
 
   <script>
-    const requestData = { file_name: '', password: '', content: '' }
+    const requestData = {
+      file_name: '',
+      password: '',
+      content: '',
+    }
 
     function handlePasswordChange(newPassword) { requestData.password = newPassword }
     function preflightCheck() {
@@ -94,6 +98,45 @@
         }
       })
     }
+
+    function changePassword() {
+
+      if (!preflightCheck()) return
+
+      const new_password = prompt('enter a new password')
+      if (!new_password) return alert('you must enter a new password')
+
+      fetch('/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...requestData, new_password })
+      }).then(async response => {
+        if (response.status == 200) {
+          requestData.password = new_password
+          document.getElementById('password').value = requestData.password
+        } else {
+          alert(await response.text())
+        }
+      })
+    }
+
+    function generateSharedSecrets() {
+
+      if (!preflightCheck()) return
+
+      fetch('/shared-secrets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData)
+      }).then(async response => {
+        if (response.status == 200) {
+          const { secrets } = await response.json()
+          alert(secrets)
+        } else {
+          alert(await response.text())
+        }
+      })
+    }
   </script>
 
 </head>
@@ -104,7 +147,7 @@
     <div class="content">
       <h1>Set Your Password</h1>
       <div class="input-field">
-        <input onkeyup="handlePasswordChange(this.value)" type="password" placeholder="Password">
+        <input onkeyup="handlePasswordChange(this.value)" id="password" type="password" placeholder="Password">
       </div>
 
       <div id="intro" class="row">
@@ -118,6 +161,8 @@
         <div class="content row">
           <button onclick="deleteFile()">Delete File</button>
           <button onclick="saveFile()">Save File</button>
+          <button onclick="changePassword()">Change Password</button>
+          <button onclick="generateSharedSecrets()">Generate Shared Secrets</button>
         </div>
       </div>
 
