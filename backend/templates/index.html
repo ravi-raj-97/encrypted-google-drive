@@ -1,27 +1,128 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Enc GDrive Login Page</title>
-  <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Rubik:400,700'><link rel="stylesheet" href="{{ url_for('static',filename='styles/styles.css') }}">
+  <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Rubik:400,700'>
+  <link rel="stylesheet" href="{{ url_for('static',filename='styles/styles.css') }}">
+
+  <script>
+    const requestData = { file_name: '', password: '', content: '' }
+
+    function handlePasswordChange(newPassword) { requestData.password = newPassword }
+    function preflightCheck() {
+      if (requestData.password.length == 0) { return alert('please enter a password') }
+      else if (requestData.file_name.length == 0) { return alert('You cannot do that with without opening a file.') }
+      return true
+    }
+
+    function openFile() {
+      requestData.file_name = window.prompt("what file would you like to open?")
+
+      if (!preflightCheck()) return
+
+      fetch('/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData)
+      }).then(async response => {
+        if (response.status == 200) {
+          const { content } = await response.json()
+          document.getElementById('file-content').value = requestData.content = content
+          document.getElementById('file-name').textContent = requestData.file_name
+          document.getElementById('file-info').style.display = ''
+        } else {
+          alert(await response.text())
+        }
+      })
+    }
+
+    function createFile() {
+      requestData.file_name = window.prompt("what file would you like to open?")
+
+      if (!preflightCheck()) return
+
+      fetch('/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData)
+      }).then(async response => {
+        if (response.status != 201) {
+          alert(await response.text())
+        } else {
+          document.getElementById('file-content').value = requestData.content = ''
+          document.getElementById('file-name').textContent = requestData.file_name
+          document.getElementById('file-info').style.display = ''
+        }
+      })
+    }
+
+    function saveFile() {
+      requestData.content = document.getElementById('file-content').value
+
+      if (!preflightCheck()) return
+
+      fetch('/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData)
+      }).then(async response => {
+        if (response.status == 200) {
+          alert('File Saved.')
+        } else {
+          alert(await response.text())
+        }
+      })
+    }
+
+    function deleteFile() {
+
+      if (!preflightCheck()) return
+
+      fetch('/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData)
+      }).then(async response => {
+        if (response.status == 204) {
+          alert('File Deleted.')
+          requestData.file_name = ''
+          document.getElementById('file-info').style.display = 'none'
+        } else {
+          alert(await response.text())
+        }
+      })
+    }
+  </script>
 
 </head>
+
 <body>
-<div class="login-form">
-  <form action="" method="post">
-    <h1>Login to the drive</h1>
-      <div class="content">
-        <div class="input-field">
-          <input name="password" type="password" placeholder="Password">
+  <div class="login-form">
+
+    <div class="content">
+      <h1>Set Your Password</h1>
+      <div class="input-field">
+        <input onkeyup="handlePasswordChange(this.value)" type="password" placeholder="Password">
+      </div>
+
+      <div id="intro" class="row">
+        <button onclick="createFile()">Create File</button>
+        <button onclick="openFile()">Open File</button>
+      </div>
+
+      <div id="file-info" class="content" style="display: none;">
+        <p id="file-name"></p>
+        <textarea id="file-content"></textarea>
+        <div class="content row">
+          <button onclick="deleteFile()">Delete File</button>
+          <button onclick="saveFile()">Save File</button>
         </div>
       </div>
-    <div class="action">
-      <button type="submit" value="Sign In">Sign In</button>
+
     </div>
-  </form>
-  {% if error %}
-        <p class="error"><strong>Error:</strong> {{ error }}
-  {% endif %}
-</div>
+  </div>
 </body>
+
 </html>

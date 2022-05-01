@@ -46,7 +46,6 @@ def main():
     create_response = post(
         Endpoint.Create,
         {
-            RequestBodyField.Content: test_content1,
             RequestBodyField.Filename: test_filename,
             RequestBodyField.Password: test_password,
         },
@@ -61,7 +60,6 @@ def main():
         {
             RequestBodyField.Filename: test_filename,
             RequestBodyField.Password: "empty",
-            RequestBodyField.Content: "",
         },
     )
 
@@ -82,6 +80,31 @@ def main():
     assert "incorrect" in bad_password_read_response.text
 
     # Read the file using the correct password
+
+    read_response = post(
+        Endpoint.Read,
+        {
+            RequestBodyField.Filename: test_filename,
+            RequestBodyField.Password: test_password,
+        },
+    )
+
+    assert read_response.status_code == 200
+
+    # Change the content in the file
+
+    update_request = post(
+        Endpoint.Update,
+        {
+            RequestBodyField.Filename: test_filename,
+            RequestBodyField.Password: test_password,
+            RequestBodyField.Content: test_content1,
+        },
+    )
+
+    assert update_request.status_code == 200
+
+    # Check that the content has been changed to the new value
 
     read_response = post(
         Endpoint.Read,

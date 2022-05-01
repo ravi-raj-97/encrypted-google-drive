@@ -99,29 +99,18 @@ def handle_verification_failure(e: ValueError):
 def handle_file_not_found(e):
     return "the file does not exist.", 404
 
-@app.route("/", methods=['GET','POST'])
-@app.route("/login", methods=['GET','POST'])
+
+@app.route("/", methods=["GET", "POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    error = None
-    if request.method == 'POST':
-        print(request.form.get('password'))
-        if request.form.get('password') != 'admin':
-            error = 'Invalid Credentials. Please try again.'
-        else:
-            # return redirect(url_for('home'))
-            error = 'Valid Credentials. Test Complete.'
-            return render_template('menu.html')
-    print(error)
-    return render_template('index.html', error=error)
+    return render_template("index.html")
+
 
 @app.post("/" + Endpoint.Create)
 def create_file():
     if request.headers.get("Content-Type") == "application/json":
-
         # read filename
         file_name = request.json[RequestBodyField.Filename]
-        # read file contents
-        contents: str = request.json[RequestBodyField.Content]
         # prepare credential byte array
         credential_bytes = get_credential_bytes()
 
@@ -130,9 +119,7 @@ def create_file():
             download_file_as_bytes(file_name)
         except Exception:
             # if file is valid, then encrypt a new version
-            file_bytes = crypto.encrypt_and_digest(
-                credential_bytes, contents.encode("UTF-8")
-            )
+            file_bytes = crypto.encrypt_and_digest(credential_bytes, bytes())
             # upload the file with the new contents
             upload_file_bytes(file_name, file_bytes)
 
