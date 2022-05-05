@@ -181,10 +181,7 @@ def get_shared_secrets():
         # turn password into 32byte key
         credential_bytes = crypto.key_from_password(password)
         # return the list of shared shamir secrets
-        shared_secrets = [
-            f"{x[0]}-{x[1].hex()}"
-            for x in crypto.create_shared_secrets(credential_bytes)
-        ]
+        shared_secrets = crypto.create_shared_secrets(credential_bytes)
 
         return {"shared_secrets": shared_secrets}
 
