@@ -16,8 +16,8 @@
 
     function handlePasswordChange(newPassword) { requestData.password = newPassword }
     function preflightCheck() {
-      if (requestData.password.length == 0) { return alert('please enter a password') }
-      else if (requestData.file_name.length == 0) { return alert('You cannot do that with without opening a file.') }
+      if (requestData.password.length == 0) { return alert('please enter a password.') }
+      else if (requestData.file_name.length == 0) { return alert('you did not enter a file name or do not have a file currently open.') }
       return true
     }
 
@@ -156,7 +156,8 @@
       </div>
 
       <div id="file-info" class="content" style="display: none;">
-        <p id="file-name"></p>
+        <h4>Filename: </h4>
+        <h4 id="file-name"></h4>
         <textarea id="file-content"></textarea>
         <div class="content row">
           <button onclick="deleteFile()">Delete File</button>

@@ -6,11 +6,6 @@ Design definitions/aspects of the backend service.
 """
 
 
-class PasswordMode(Enum):
-    Owner = "owner"
-    Shared = "shared"
-
-
 class RequestBodyField:
     Filename = "file_name"
     Password = "password"
