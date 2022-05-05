@@ -24,7 +24,9 @@ def get_credential_bytes():
     # prepare credential byte array
     credential_bytes: bytes
 
-    if RequestBodyField.Password in request.json:
+    if RequestBodyField.Password in request.json and len(
+        request.json[RequestBodyField.Password]
+    ):
         if DEBUG:
             print("[SERVER] using password authentication.")
         # read the password json field
@@ -32,12 +34,13 @@ def get_credential_bytes():
         # turn the password into valid credential bytes
         credential_bytes = crypto.key_from_password(password)
 
-    elif RequestBodyField.SharedSecrets in request.json:
+    elif RequestBodyField.SharedSecrets in request.json and len(
+        request.json[RequestBodyField.SharedSecrets]
+    ):
         if DEBUG:
             print("[SERVER] using shared-secret authentication.")
         # read shared secret list
-        # TODO decide what to parse this as
-        shared_secrets: List[str] = request.json[RequestBodyField.SharedSecrets]
+        shared_secrets: list = request.json[RequestBodyField.SharedSecrets].split(",")
         # create credentials key from shared secrets
         credential_bytes = crypto.key_from_shared(shared_secrets)
 
@@ -183,7 +186,7 @@ def get_shared_secrets():
         # return the list of shared shamir secrets
         shared_secrets = crypto.create_shared_secrets(credential_bytes)
 
-        return {"shared_secrets": shared_secrets}
+        return {RequestBodyField.SharedSecrets: shared_secrets}, 200
 
 
 if __name__ == "__main__":

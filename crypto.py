@@ -129,7 +129,7 @@ def decrypt_and_verify(credential_bytes: bytes, file_data: bytes) -> str:
 
 
 if __name__ == "__main__":
-    password = "weewee"
+    password = "test string to verify that the shared secrets is working"
     pass_bytes = key_from_password(password)
     print("hashed pass:\n\t", pass_bytes)
     shared_secrets = create_shared_secrets(pass_bytes)

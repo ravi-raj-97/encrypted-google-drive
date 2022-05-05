@@ -12,12 +12,18 @@
       file_name: '',
       password: '',
       content: '',
+      shared_secrets: '',
     }
 
     function handlePasswordChange(newPassword) { requestData.password = newPassword }
+    function handleSecretsChange(newSecrets) { requestData.shared_secrets = newSecrets }
+
     function preflightCheck() {
-      if (requestData.password.length == 0) { return alert('please enter a password.') }
-      else if (requestData.file_name.length == 0) { return alert('you did not enter a file name or do not have a file currently open.') }
+      if (requestData.password.length == 0 && requestData.shared_secrets.length == 0) {
+        return alert('please enter a password or shared secrets.')
+      } else if (requestData.file_name.length == 0) {
+        return alert('you did not enter a file name or do not have a file currently open.')
+      }
       return true
     }
 
@@ -130,8 +136,8 @@
         body: JSON.stringify(requestData)
       }).then(async response => {
         if (response.status == 200) {
-          const { secrets } = await response.json()
-          alert(secrets)
+          const { shared_secrets } = await response.json()
+          alert(shared_secrets)
         } else {
           alert(await response.text())
         }
@@ -148,6 +154,7 @@
       <h1>Set Your Password</h1>
       <div class="input-field">
         <input onkeyup="handlePasswordChange(this.value)" id="password" type="password" placeholder="Password">
+        <input onkeyup="handleSecretsChange(this.value)" id="secrets" placeholder="comma separated secrets">
       </div>
 
       <div id="intro" class="row">
