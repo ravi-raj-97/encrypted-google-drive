@@ -11,12 +11,10 @@ import crypto
 import drive
 from definitions import *
 
-
 app = Flask(__name__)
 CORS(app)
 
-# service = drive.init_drive_service()
-
+drive.init()
 
 def get_credential_bytes():
     # prepare credential byte array
@@ -114,18 +112,26 @@ def create_file():
         # prepare credential byte array
         credential_bytes = get_credential_bytes()
 
-        # check if the file exists
-        try:
-            download_file_as_bytes(file_name)
-        except Exception:
-            # if file is valid, then encrypt a new version
+        if not drive.exists(file_name):
             file_bytes = crypto.encrypt_and_digest(credential_bytes, bytes())
-            # upload the file with the new contents
-            upload_file_bytes(file_name, file_bytes)
-
+            drive.write(file_name, file_bytes)
             return "", 201
         else:
             return f"the file `{file_name}` already exists.", 409
+
+        # TODO: Clean-up old code after new func is verified to be working
+        # # check if the file exists
+        # try:
+        #     download_file_as_bytes(file_name)
+        # except Exception:
+        #     # if file is valid, then encrypt a new version
+            
+        #     # upload the file with the new contents
+        #     upload_file_bytes(file_name, file_bytes)
+
+        #     return "", 201
+        # else:
+        #     return f"the file `{file_name}` already exists.", 409
 
 
 @app.post("/" + Endpoint.Read)
@@ -135,8 +141,13 @@ def read_file():
         file_name = request.json[RequestBodyField.Filename]
         # prepare credential byte array
         credential_bytes = get_credential_bytes()
+        
         # check if the file exists
-        file_data = download_file_as_bytes(file_name)
+        file_data = drive.read(file_name)
+
+        # TODO: Clean-up old code after new func is verified to be working
+        # file_data = download_file_as_bytes(file_name)
+
         # if file is valid, then encrypt a new version
         content = crypto.decrypt_and_verify(credential_bytes, file_data)
         # return the content of the file to the user
@@ -152,16 +163,25 @@ def update_file():
         new_contents: str = request.json[RequestBodyField.Content]
         # prepare credential byte array
         credential_bytes = get_credential_bytes()
+        
         # download file
-        file_data = download_file_as_bytes(file_name)
+        file_data = drive.read(file_name)
+
+        # TODO: Clean-up old code after new func is verified to be working
+        # file_data = download_file_as_bytes(file_name)
+
         # verify that the contents are correct
         crypto.decrypt_and_verify(credential_bytes, file_data)
         # if file is valid, then encrypt a new version
         updated_file_bytes = crypto.encrypt_and_digest(
             credential_bytes, new_contents.encode("UTF-8")
         )
+        
         # upload the file with the new contents
-        upload_file_bytes(file_name, updated_file_bytes)
+        drive.write(file_name, updated_file_bytes)
+        
+        # TODO: Clean-up old code after new func is verified to be working
+        # upload_file_bytes(file_name, updated_file_bytes)
 
         return "", 200
 
@@ -173,12 +193,20 @@ def delete_file():
         file_name = request.json[RequestBodyField.Filename]
         # prepare credential byte array
         credential_bytes = get_credential_bytes()
+        
         # download file
-        file_data = download_file_as_bytes(file_name)
+        file_data = drive.read(file_name)
+        
+        # TODO: Clean-up old code after new func is verified to be working
+        # file_data = download_file_as_bytes(file_name)
+
         # verify that the contents are correct
         crypto.decrypt_and_verify(credential_bytes, file_data)
         # remove the file
-        delete_file_bytes(file_name)
+        drive.delete(file_name)
+        
+        # TODO: Clean-up old code after new func is verified to be working
+        # delete_file_bytes(file_name)
 
         return "", 204
 
@@ -188,26 +216,39 @@ def change_password():
     if request.headers.get("Content-Type") == "application/json":
         # prepare credential byte array
         credential_bytes = get_credential_bytes()
-
         # read file name
         file_name = request.json[RequestBodyField.Filename]
-        # fetch the file
-        file_data = download_file_as_bytes(file_name)
-        # decrypt the file
-        file_contents = crypto.decrypt_and_verify(credential_bytes, file_data)
-
         # read the new password the user wants for the file
         new_password = request.json[RequestBodyField.NewPassword]
+        # read file name
+        file_data = drive.read(file_name)
+        # decrypt the file
+        file_contents = crypto.decrypt_and_verify(credential_bytes, file_data)
         # create new credential bytes
         credential_bytes = crypto.key_from_password(new_password)
-
         # encrypt the file with the new contents
         new_file_data = crypto.encrypt_and_digest(
             credential_bytes, file_contents.encode("UTF-8")
         )
-
         # upload this new file to the drive
-        upload_file_bytes(file_name, new_file_data)
+        drive.write(file_name, new_file_data)
+
+        # TODO: Clean-up old code after new func is verified to be working
+        # # fetch the file
+        # file_data = download_file_as_bytes(file_name)
+        # # decrypt the file
+        # file_contents = crypto.decrypt_and_verify(credential_bytes, file_data)
+
+        # # create new credential bytes
+        # credential_bytes = crypto.key_from_password(new_password)
+
+        # # encrypt the file with the new contents
+        # new_file_data = crypto.encrypt_and_digest(
+        #     credential_bytes, file_contents.encode("UTF-8")
+        # )
+
+        # # upload this new file to the drive
+        # upload_file_bytes(file_name, new_file_data)
 
         return "", 200
 
@@ -231,3 +272,4 @@ def get_shared_secrets():
 
 if __name__ == "__main__":
     app.run(debug=True)
+    drive.close()
