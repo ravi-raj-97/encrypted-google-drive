@@ -58,16 +58,18 @@ def key_from_shared(shared_secrets: List[str]) -> bytes:
 
     # Compute the Lagrange coefficients at ``0``.
     coefficients = dict()
-    for i in range(1, len(points) + 1):
+    for i, y_i in enumerate(points.keys(), start=1):
         coefficients[i] = 1
-        for j in range(1, len(points) + 1):
-            if j != i:
-                coefficients[i] = (coefficients[i] * (-j) * inv(i - j, _PRIME)) % _PRIME
+        for j, y_j in enumerate(points.keys(), start=1):
+            if y_i != y_j:
+                coefficients[i] = (
+                    coefficients[i] * (-y_j) * inv(y_i - y_j, _PRIME)
+                ) % _PRIME
 
     key = 0
     # compute using horners theorem for computing polynomials
-    for i in range(1, len(points) + 1):
-        key = (key + points[i] * coefficients[i]) % _PRIME
+    for i, g in enumerate(points.values(), start=1):
+        key = (key + g * coefficients[i]) % _PRIME
 
     # return the assembled key, which is equivalent to the bytes of the password
     return key.to_bytes(32, "big")
