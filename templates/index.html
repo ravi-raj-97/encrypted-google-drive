@@ -13,10 +13,13 @@
       password: '',
       content: '',
       shared_secrets: '',
+      shares: '',
+      threshold: ''
     }
 
     function handlePasswordChange(newPassword) { requestData.password = newPassword }
     function handleSecretsChange(newSecrets) { requestData.shared_secrets = newSecrets }
+    function handleKeyChange(key, value) { requestData[key] = value }
 
     function preflightCheck() {
       if (requestData.password.length == 0 && requestData.shared_secrets.length == 0) {
@@ -170,7 +173,11 @@
           <button onclick="deleteFile()">Delete File</button>
           <button onclick="saveFile()">Save File</button>
           <button onclick="changePassword()">Change Password</button>
-          <button onclick="generateSharedSecrets()">Generate Shared Secrets</button>
+          <div>
+            <button onclick="generateSharedSecrets()">Generate Shared Secrets</button>
+            <input onkeyup="handleKeyChange('shares', this.value)" placeholder="Shares">
+            <input onkeyup="handleKeyChange('threshold', this.value)" placeholder="Threshold">
+          </div>
         </div>
       </div>
 

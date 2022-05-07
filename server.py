@@ -22,7 +22,7 @@ def get_credential_bytes():
     if DEBUG:
         print("[SERVER] checking for authentication credentials.")
     # prepare credential byte array
-    credential_bytes: bytes
+    credential_bytes: bytes = None
 
     if RequestBodyField.Password in request.json and len(
         request.json[RequestBodyField.Password]
@@ -64,6 +64,11 @@ def handle_verification_failure(e: ValueError):
 @app.errorhandler(FileNotFoundError)
 def handle_file_not_found(e):
     return "the file does not exist.", 404
+
+
+@app.errorhandler(Exception)
+def fallback_error(e: Exception):
+    return str(e), 400
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -181,10 +186,15 @@ def get_shared_secrets():
     if request.headers.get("Content-Type") == "application/json":
         # read password field coming in from the user
         password = request.json[RequestBodyField.Password]
+        # read share count and threshold from request
+        shares = int(request.json[RequestBodyField.Shares])
+        threshold = int(request.json[RequestBodyField.Threshold])
         # turn password into 32byte key
         credential_bytes = crypto.key_from_password(password)
         # return the list of shared shamir secrets
-        shared_secrets = crypto.create_shared_secrets(credential_bytes)
+        shared_secrets = crypto.create_shared_secrets(
+            credential_bytes, shares, threshold
+        )
 
         return {RequestBodyField.SharedSecrets: shared_secrets}, 200
 

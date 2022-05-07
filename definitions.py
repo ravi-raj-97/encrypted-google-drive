@@ -12,6 +12,8 @@ class RequestBodyField:
     SharedSecrets = "shared_secrets"
     NewPassword = "new_password"
     Content = "content"
+    Shares = "shares"
+    Threshold = "threshold"
 
 
 class Endpoint:

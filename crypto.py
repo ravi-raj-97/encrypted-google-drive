@@ -19,21 +19,23 @@ already provided in the pycryptodome package.
 # prime modulo close to the 256 bit limit of AES-256
 _PRIME: int = 2**256 - 189
 
-SHARES: int = 5
-SHARES_SUFFICIENT: int = 3
 
+def create_shared_secrets(
+    credential_bytes: bytes, share_count: int = 5, shares_sufficient: int = 3
+) -> list:
+    if shares_sufficient > share_count:
+        raise Exception("share count should not be less than the sufficient threshold.")
 
-def create_shared_secrets(credential_bytes: bytes) -> list:
     int_secret = int.from_bytes(credential_bytes, "big")
 
     shares = dict()
     # Random polynomial coefficients.
     coefficients: List[int] = [int_secret] + [
-        randint(0, _PRIME - 1) for _ in range(1, SHARES_SUFFICIENT)
+        randint(0, _PRIME - 1) for _ in range(1, shares_sufficient)
     ]
 
     # Compute each share such that shares[i] = f(i).
-    for i in range(1, SHARES + 1):
+    for i in range(1, share_count + 1):
         shares[i] = coefficients[0]
         for j in range(1, len(coefficients)):
             shares[i] = (shares[i] + coefficients[j] * pow(i, j)) % _PRIME
@@ -42,12 +44,6 @@ def create_shared_secrets(credential_bytes: bytes) -> list:
 
 
 def key_from_shared(shared_secrets: List[str]) -> bytes:
-    # check whether the number of shared secerts in the input is enough to recreate the key
-    if len(shared_secrets) < SHARES_SUFFICIENT:
-        raise Exception(
-            f"required to have at least {SHARES_SUFFICIENT} shared secrets."
-        )
-
     def inv(a: int, prime: int):
         return pow(a, prime - 2, prime)
 

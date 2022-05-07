@@ -36,8 +36,21 @@ def main():
     test_content2 = "content was changed"
 
     # cleanup test bed
-    if os.path.exists(test_filename):
-        os.remove(test_filename)
+    delete_response = post(
+        Endpoint.Delete,
+        {
+            RequestBodyField.Filename: test_filename,
+            RequestBodyField.Password: test_password,
+        },
+    )
+
+    delete_response = post(
+        Endpoint.Delete,
+        {
+            RequestBodyField.Filename: test_filename,
+            RequestBodyField.Password: test_updated_password,
+        },
+    )
 
     """ RUN TESTS """
 
@@ -193,7 +206,68 @@ def main():
 
     assert read_response.status_code == 404
 
-    #  TODO - shared secret tests
+    # generate the shared secrets for a given password
+
+    share_count = 4
+    threshold = 2
+
+    generate_shared_secrets_response = post(
+        Endpoint.SharedSecrets,
+        {
+            RequestBodyField.Password: test_updated_password,
+            RequestBodyField.Shares: share_count,
+            RequestBodyField.Threshold: threshold,
+        },
+    )
+
+    generated_secrets: list = generate_shared_secrets_response.json()[
+        RequestBodyField.SharedSecrets
+    ]
+
+    assert len(generated_secrets) == share_count
+
+    # try to access the file with the correct amount of shared secrets
+
+    read_response = post(
+        Endpoint.Read,
+        {
+            RequestBodyField.Filename: test_filename,
+            RequestBodyField.SharedSecrets: ",".join(
+                (generated_secrets[0], generated_secrets[-1])
+            ),
+        },
+    )
+
+    assert read_response.status_code == 200
+    assert test_content2 in read_response.text
+
+    # try to access the file while missing secrets or using incorrect secrets
+
+    read_response = post(
+        Endpoint.Read,
+        {
+            RequestBodyField.Filename: test_filename,
+            RequestBodyField.SharedSecrets: generated_secrets[0],
+        },
+    )
+
+    assert read_response.status_code == 401
+
+    # try to read a file that doesnt exist
+    read_response = post(
+        Endpoint.Read,
+        {
+            RequestBodyField.Filename: test_filename,
+            RequestBodyField.SharedSecrets: ",".join(
+                (
+                    generated_secrets[0],
+                    "3-df6649b96881ff3da76282dfe7501d59a4824e7e3db9862d7b45840b5b16b959",
+                )
+            ),
+        },
+    )
+
+    assert read_response.status_code == 401
 
     # delete the file
 
