@@ -81,11 +81,11 @@ def key_from_password(password: str) -> bytes:
     return sha256(password.encode("UTF-8")).digest()
 
 
-def compute_salted_hash(credenial_bytes: bytes, salt: bytes) -> bytes:
+def compute_salted_hash(credential_bytes: bytes, salt: bytes) -> bytes:
     key = bytes()
     r = 10
     for i in range(1, r):
-        key = sha256(key + credenial_bytes + salt).digest()
+        key = sha256(key + credential_bytes + salt).digest()
     return key
 
 
