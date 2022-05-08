@@ -23,6 +23,12 @@ _PRIME: int = 2**256 - 189
 def create_shared_secrets(
     credential_bytes: bytes, share_count: int = 5, shares_sufficient: int = 3
 ) -> list:
+    if shares_sufficient > 3:
+        raise Exception("cannot set threshold to a value greater than 3")
+
+    if share_count > 5:
+        raise Exception("share count cannot be greater than 5")
+
     if shares_sufficient > share_count:
         raise Exception("share count should not be less than the sufficient threshold.")
 
