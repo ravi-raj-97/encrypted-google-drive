@@ -3,7 +3,6 @@ from random import randint
 from typing import List
 from hashlib import sha256
 
-import shamirs
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 
